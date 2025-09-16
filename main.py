@@ -2,19 +2,25 @@ import xarray as xr
 import numpy as np
 
 
-ds = xr.open_dataset('https://thredds.met.no/thredds/dodsC/accibergt5/topaz5_be_mem001.ncml')
+sia = []
+sie = []
+for i in range(1, 11):
+    ds = xr.open_dataset(f'https://thredds.met.no/thredds/dodsC/accibergt5/topaz5_be_mem0{i:02}.ncml')
 
-start = np.datetime64(ds.bulletin_date) + np.timedelta64(12, 'h')
-time = np.arange(start, start + np.timedelta64(10, 'D'), np.timedelta64(1, 'D'))
+    start = np.datetime64(ds.bulletin_date) + np.timedelta64(12, 'h')
+    time = np.arange(start, start + np.timedelta64(10, 'D'), np.timedelta64(1, 'D'))
 
-da = ds.siconc.sel(time=time)
+    da = ds.siconc.sel(time=time)
 
-area_per_cell = 100 * 100 # square kilometers
+    resolution = 6.25  # kilometers
+    area_per_cell = resolution**2  # square kilometers
 
-sia = (da * area_per_cell).sum(dim=['x', 'y']) / 1_000_000
-sie = (xr.where(da >= 0.15, 1, 0) * area_per_cell).sum(dim=['x', 'y']) / 1_000_000
+    million_sq_km = 1_000_000
+    sie_threshold = 0.15
+    sia.append((da * area_per_cell).sum(dim=['x', 'y']) / million_sq_km)
+    sie.append((xr.where(da >= sie_threshold, 1, 0) * area_per_cell).sum(dim=['x', 'y']) / million_sq_km)
 
-print(sia)
-print(sie)
+ds_sia = xr.concat(sia, dim=xr.Variable('member', [i for i in range(1, 11)])).convert_calendar('all_leap')
+ds_sie = xr.concat(sie, dim=xr.Variable('member', [i for i in range(1, 11)])).convert_calendar('all_leap')
 
-# TODO: figure out why the forecasted area and extent is several orders of magnitude larger than what is observed.
+# TODO: implement region masking
