@@ -1,5 +1,10 @@
+from pathlib import Path
 import xarray as xr
 import numpy as np
+
+
+p = Path('data')
+p.mkdir(exist_ok=True)
 
 
 sia = []
@@ -21,6 +26,8 @@ for i in range(1, 11):
     sie.append((xr.where(da >= sie_threshold, 1, 0) * area_per_cell).sum(dim=['x', 'y']) / million_sq_km)
 
 ds_sia = xr.concat(sia, dim=xr.Variable('member', [i for i in range(1, 11)])).convert_calendar('all_leap')
+ds_sia.to_netcdf(p / 'sia_nh.nc')
 ds_sie = xr.concat(sie, dim=xr.Variable('member', [i for i in range(1, 11)])).convert_calendar('all_leap')
+ds_sie.to_netcdf(p / 'sie_nh.nc')
 
 # TODO: implement region masking
